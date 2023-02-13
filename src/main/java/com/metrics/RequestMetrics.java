@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @CreationDate 2022/11/2 21:15
  * @Description ：
  */
+@Deprecated
 public class RequestMetrics implements Metrics{
     /**
      *     适配器模式

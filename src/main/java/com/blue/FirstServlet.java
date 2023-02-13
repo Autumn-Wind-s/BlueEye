@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @CreationDate 2022/11/2 19:52
  * @Description ：
  */
+@Deprecated
 @WebServlet(name = "FirstServlet", value = "/first",loadOnStartup = 1)
 public class FirstServlet extends HttpServlet {
     Map<MetricsType, Map<String, Metrics>> map=new ConcurrentHashMap<>();

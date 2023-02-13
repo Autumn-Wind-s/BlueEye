@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
  * @CreationDate 2022/11/2 21:01
  * @Description ：
  */
+@Deprecated
 public abstract class Monitor<T >{
     /**
      * 监控池，后期可用对应的监控池代替

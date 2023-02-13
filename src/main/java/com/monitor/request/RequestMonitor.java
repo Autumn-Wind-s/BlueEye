@@ -15,6 +15,7 @@ import java.util.Set;
  * @CreationDate 2022/11/2 20:37
  * @Description ：
  */
+@Deprecated
 public class RequestMonitor extends Monitor<RequestMetrics> {
 
     /**

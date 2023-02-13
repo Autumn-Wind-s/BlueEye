@@ -19,7 +19,7 @@ import javax.servlet.annotation.*;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
-
+@Deprecated
 @WebServlet(name = "UserServlet", value = "/UserServlet")
 public class UserServlet extends HttpServlet {
 
