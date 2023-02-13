@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BlueEye>
+    <restartConfig>
+        <restart>false</restart>
+        <recoveryFile>""</recoveryFile>
+    </restartConfig>
+    <users>
+        <user>
+            <name></name>
+            <password></password>
+            <role></role>
+        </user>
+    </users>
+    <scanPackageName></scanPackageName>
+    <rdb>
+        <path></path>
+        <fileNum></fileNum>
+    </rdb>
+    <persistence>
+        <mode>default</mode>
+        <alertMapper></alertMapper>
+        <instanceMapper></instanceMapper>
+        <metricMapper></metricMapper>
+        <taskMapper></taskMapper>
+    </persistence>
+    <timeWheel>
+        <timeSpan></timeSpan>
+        <size></size>
+    </timeWheel>
+    <coreThread></coreThread>
+    <retryNum></retryNum>
+    <monitorTasks>
+        <monitorTask></monitorTask>
+        <monitorTask></monitorTask>
+    </monitorTasks>
+
+</BlueEye>
