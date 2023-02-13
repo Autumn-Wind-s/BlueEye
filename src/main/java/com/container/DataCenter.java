@@ -62,10 +62,9 @@ public class DataCenter {
      * 作为用户自定义数据的打点上传入口
      *
      * @param name  tag名称
-     * @param clazz tag所记录的数据的类型
      * @param data  数据
      */
-    public void uploadTagData(String name, Class clazz, Object data) {
+    public <T> void uploadTagData(String name, T data) {
         //先判断是否为该tag的首次上传
         Integer id = mapping.getId(MetricsType.Tag, name);
         if (id == null) {
@@ -74,7 +73,7 @@ public class DataCenter {
             mapping.putMapping(MetricsType.Tag, name, id);
         }
         //获取对应类型的Tag对象
-        TagData tagData = getTagMetric(clazz, data);
+        TagData<T> tagData = new TagData<T>(data);
         tagData.setId(dataId.incrementAndGet());
         tagData.setTaskId(id);
         tagData.setCreateTime(new Timestamp(System.currentTimeMillis()));
@@ -82,12 +81,7 @@ public class DataCenter {
         this.metrics.addMetricData(tagData);
     }
 
-    public static <T> TagData<T> getTagMetric(Class<T> clz, Object o) {
-        if (clz.isInstance(o)) {
-            return new TagData<>((T) o);
-        }
-        return null;
-    }
+
 
     /**
      * 最新数据与之前数据无关，直接上传数据对象
