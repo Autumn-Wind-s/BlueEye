@@ -1,10 +1,9 @@
 import com.container.BlueEyeContext;
 import com.container.DataCenter;
+import com.pojo.instance.InstanceState;
 import com.pojo.metric.TagData;
 
-import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * @Author SDJin
@@ -13,13 +12,11 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class test {
     String a;
-    public static void main(String[] args) throws IOException {
-        TagData integerTagData = DataCenter.getTagMetric(String.class, "12");
-        System.out.println(integerTagData.getData().getClass());
-        HashMap<Object, Object> objectObjectHashMap = new HashMap<>();
-        Stack<Object> objects = new Stack<>();
-        Deque<Integer> stack=new ArrayDeque<>();
-
+    public static void main(String[] args) throws Exception {
+     EnumUtil.addEnum(InstanceState.class,new Class[]{String.class},new String[]{"Te"});
+        for (InstanceState value : InstanceState.values()) {
+            System.out.println(value.name());
+        }
     }
 
     public String run() {

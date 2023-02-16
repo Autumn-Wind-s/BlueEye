@@ -61,7 +61,7 @@ public class TimerScheduler implements Timer {
             while(true){
                 for (TaskInstance taskInstance : queue) {
                     //判断任务是否为终止
-                    if(taskInstance.getState().equals(InstanceState.TERMINATED)){
+                    if(taskInstance.getState().equals(InstanceState.TERMINATED0)){
                         queue.remove(taskInstance);
                     }
                     //判断前置任务是否执行完成

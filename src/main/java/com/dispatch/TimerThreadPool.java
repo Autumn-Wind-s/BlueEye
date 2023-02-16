@@ -56,7 +56,7 @@ public class TimerThreadPool extends ThreadPoolExecutor {
             throw new RuntimeException("阻塞");
         }
         //判断是否处于首次人为终止，人为终止只会为改变任务的状态，其重试计数为默认值0，即使重复终止不会改变重试计数
-        if (taskInstance.getState().equals(InstanceState.TERMINATED)&&taskInstance.getState().getNum() == 0) {
+        if (taskInstance.getState().equals(InstanceState.TERMINATED0)) {
                 //实例首次运行时被人为终止，抛异常阻止任务执行
                 throw new RuntimeException("终止");
         }
@@ -83,23 +83,26 @@ public class TimerThreadPool extends ThreadPoolExecutor {
                 timerLauncher.add(taskInstance);
             } else if ("终止".equals(t.getMessage())) {
                 //任务被首次人为终止，将任务的重试次数加1作为下次重试的次数
-                taskInstance.getState().add();
+                taskInstance.setState(InstanceState.valueOf("TERMINATED1"));
             }  else {
                 //任务属于执行时异常终止，报警通知用户发生异常终止
 
                 // 判断是否是首次异常终止
-                if (!taskInstance.getState().equals(InstanceState.TERMINATED)) {
-                    //首次终止，更改状态，重试次数加1，报警
-                    taskInstance.setState(InstanceState.TERMINATED);
-                    taskInstance.getState().add();
+                if (taskInstance.getState().name().indexOf("TERMINATED")!=-1) {
+                    //首次终止，更改状态，将任务的重试次数加1作为下次重试的次数
+                    taskInstance.setState(InstanceState.valueOf("TERMINATED1"));
+                    //todo 报警
                 } else {
                     //非首次终止，判断当前重试次数是否为最后一次，
-                    if(taskInstance.getState().getNum()==num){
+                    String name = taskInstance.getState().name();
+                    int n=name.charAt(name.length()-1)-'0';
+                    if(n==num){
                         //最后一次重试仍然失败，更改状态为死亡，避免浪费资源
                         taskInstance.setState(InstanceState.DIE);
                     }else{
                         //仍可以继续重试，重试次数加1，报警
-                        taskInstance.getState().add();
+                        n++;
+                        taskInstance.setState(InstanceState.valueOf("TERMINATED"+n));
                     }
                 }
             }

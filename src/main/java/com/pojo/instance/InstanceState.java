@@ -9,48 +9,31 @@ public enum InstanceState {
     /**
      * 就绪
      */
-    READY(),
+    READY,
     /**
      * 运行中
      */
-    RUNNING(),
+    RUNNING,
     /**
      * 阻塞
      */
-    BLOCKING(),
+    BLOCKING,
     /**
      * 终止
      */
-    TERMINATED(),
+    TERMINATED0,
     /**
      * 完成
      */
-    FINISHED(),
+    FINISHED,
     /**
      * 死亡
      */
     DIE;
-    /**
-     * 作为重试计数器
-     */
-    private int num =0;
 
-    InstanceState(int num) {
-        this.num = num;
+    static {
+        //todo  读取配置中心的重试阈值配置，没有则取默认3
+        // 根据配置使用EnumUtil.addEnum动态增加枚举值
+        //  然后正常使用枚举即可
     }
-
-    InstanceState() {
-    }
-
-
-    public int getNum() {
-        return num;
-    }
-
-    public void add(){
-        num++;
-    }
-
-    
-
 }
