@@ -1,6 +1,7 @@
 package com.container;
 
 import com.dispatch.TimerScheduler;
+import com.mapper.MapperManager;
 import com.pojo.task.ExecuteCallback;
 import com.pojo.task.MonitorTask;
 import com.rdb.Rdb;
@@ -19,11 +20,15 @@ public class BlueEyeContext {
     public static DataCenter dataCenter;
     public static TimerScheduler timerScheduler;
     public static Rdb rdb;
+    public static MapperManager mapperManager;
 
     public void init(ServletContext context) {
-
+        //todo
     }
 
+    public  void destroy(){
+        //todo
+    }
     /**
      * 作为提供给用户进行线程池监控的入口
      *
