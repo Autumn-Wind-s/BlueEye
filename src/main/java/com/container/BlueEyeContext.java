@@ -7,6 +7,7 @@ import com.pojo.task.MonitorTask;
 import com.rdb.Rdb;
 
 import javax.servlet.ServletContext;
+import javax.sql.DataSource;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +51,18 @@ public class BlueEyeContext {
 
     }
 
+    /**
+     * 作为提供给用户进行数据源监控的入口
+     * @param dataSourceName
+     * @param dataSource
+     */
+    public static void monitorDataSource(String dataSourceName, DataSource dataSource){
+        // 生成监控任务，定义监控逻辑
+        //分配任务id
+        //存储任务
+        //存储数据源名称和任务id的映射
+        //生成任务实例传入任务调度器执行
+    }
     /**
      * 作为用户自定义调度任务添加的入口
      *
