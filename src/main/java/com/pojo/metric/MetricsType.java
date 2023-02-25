@@ -12,6 +12,8 @@ public enum MetricsType {
     Sql,
     //线程池
     Executors,
+    //数据源
+    DataSource,
     //系统指标
     System,
     //打点指标
