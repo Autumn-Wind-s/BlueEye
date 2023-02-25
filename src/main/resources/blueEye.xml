@@ -18,6 +18,7 @@
     </rdb>
     <persistence>
         <mode>default</mode>
+        <init></init>>
         <alertMapper></alertMapper>
         <instanceMapper></instanceMapper>
         <metricMapper></metricMapper>
