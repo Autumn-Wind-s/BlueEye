@@ -25,7 +25,7 @@
 
   <name>BlueEye</name>
   <modules>
-    <module>SSM</module>
+    <module></module>
   </modules>
   <groupId>org.example</groupId>
   <artifactId>BlueEye</artifactId>
@@ -137,6 +137,29 @@
       <version>1.13</version>
     </dependency>
 
+    <dependency>
+      <groupId>cn.hutool</groupId>
+      <artifactId>hutool-all</artifactId>
+      <version>5.8.2</version>
+    </dependency>
+    <!--       Java的免费基于JNA的操作系统和硬件信息库 -->
+    <!-- https://mvnrepository.com/artifact/com.github.oshi/oshi-core -->
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-core</artifactId>
+      <version>6.1.5</version>
+    </dependency>
+    <!--        JNA（Java Native Access ）提供一组Java工具类用于在运行期间动态访问系统本地库（native library：如Window的dll）而不需要编写任何Native/JNI代码。开发人员只要在一个java接口中描述目标native library的函数与结构，JNA将自动实现Java接口到native function的映射。-->
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>5.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>5.10.0</version>
+    </dependency>
   </dependencies>
 
 </project>
