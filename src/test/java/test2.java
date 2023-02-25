@@ -1,3 +1,4 @@
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -6,14 +7,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @Description ：
  */
 public class test2 {
-    test s;
-
     public static void main(String[] args) throws Exception {
-        int[] ints = {1, 3, 5, 9, 4};
-        sort(ints);
-        for (int l : ints) {
-            System.out.println(l);
-        }
+        Collections.sort(null, new Comparator<Object>() {
+            @Override
+            public int compare(Object o1, Object o2) {
+                return 0;
+            }
+        });
     }
 
     public static void sort(int[] nums) {

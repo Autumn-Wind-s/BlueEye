@@ -17,6 +17,14 @@ public class test {
         for (InstanceState value : InstanceState.values()) {
             System.out.println(value.name());
         }
+        TreeSet<int[]> set=new TreeSet<>(new Comparator<int[]>() {
+            @Override
+            public int compare(int[] o1, int[] o2) {
+                return 0;
+            }
+        });
+        StringBuffer s=new StringBuffer();
+        String c=new String();
     }
 
     public String run() {

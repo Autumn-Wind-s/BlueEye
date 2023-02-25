@@ -25,7 +25,6 @@ public class UserServlet extends HttpServlet {
 
     FlowHelper helper=new FlowHelper(FlowType.Minute);
 
-    @RequestEye("/UserServlet")
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         System.out.println("user");
