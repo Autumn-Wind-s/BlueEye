@@ -1,5 +1,7 @@
 package com.pojo.instance;
 
+import com.pojo.Compression.CompressionInterface;
+import com.pojo.po.TaskInstancePo;
 import lombok.Data;
 
 import java.sql.Timestamp;
@@ -11,7 +13,7 @@ import java.util.concurrent.Callable;
  * @Description ：
  */
 @Data
-public class TaskInstance implements Callable {
+public class TaskInstance implements Callable, CompressionInterface<TaskInstancePo> {
     private final Integer instanceId;
     private final Integer taskId;
     private InstanceState state;
@@ -31,11 +33,28 @@ public class TaskInstance implements Callable {
         return true;
     }
 
+    /**
+     * 通过构造器实现反压缩
+     * @param instancePo
+     */
+    public TaskInstance(TaskInstancePo instancePo){
+       //无用代码，暂时避免报错，后期删掉
+        this.instanceId=0;
+        this.taskId=0;
+        //todo 反压缩逻辑
+
+    }
     @Override
     public Object call() throws Exception {
         //根据任务id查询任务对象，执行任务的execute()
 
         //将返回值append到record中作为实例执行记录
+        return null;
+    }
+
+    @Override
+    public TaskInstancePo compress() {
+        //todo 压缩逻辑
         return null;
     }
 }

@@ -1,5 +1,8 @@
 package com.pojo.task;
 
+import com.pojo.Compression.CompressionInterface;
+import com.pojo.po.TaskPo;
+
 import java.util.List;
 
 /**
@@ -7,7 +10,7 @@ import java.util.List;
  * @CreationDate 2023/2/7 20:27
  * @Description ：调度任务
  */
-public abstract class TimerTask extends Task {
+public abstract class TimerTask extends Task implements CompressionInterface<TaskPo> {
     /**
      * 实现类用Collections的加锁List，避免线程安全问题
      */

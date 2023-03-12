@@ -1,5 +1,7 @@
 package com.pojo.metric;
 
+import com.pojo.Compression.CompressionInterface;
+import com.pojo.po.MetricDataPo;
 import lombok.Data;
 
 import java.sql.Timestamp;
@@ -10,9 +12,11 @@ import java.sql.Timestamp;
  * @Description ：
  */
 @Data
-public class MetricData {
+public abstract class MetricData implements CompressionInterface<MetricDataPo> {
    protected Integer id;
    protected Integer taskId;
    protected Integer instanceId;
    protected Timestamp createTime;
+
+
 }

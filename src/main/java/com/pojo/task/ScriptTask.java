@@ -1,5 +1,6 @@
 package com.pojo.task;
 
+import com.pojo.po.TaskPo;
 import lombok.Data;
 
 import java.util.List;
@@ -17,9 +18,25 @@ public class ScriptTask extends TimerTask {
      */
     private final String shell;
 
+    /**
+     * 通过构造器进行反压缩
+     * @param taskPo
+     */
+    public ScriptTask(TaskPo taskPo) {
+        //后期删掉
+        shell="";
+        //todo 反压缩逻辑
+    }
+
     @Override
     public String execute() throws Exception {
         //用java.lang.Runtime类的exec()方法执行shell脚本
+        return null;
+    }
+
+    @Override
+    public TaskPo compress() {
+        //todo 压缩逻辑
         return null;
     }
 }
