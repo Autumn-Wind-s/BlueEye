@@ -1,4 +1,4 @@
-package com.pojo.instance;
+package blueeye.pojo.instance;
 
 /**
  * @Author SDJin
@@ -19,9 +19,9 @@ public enum InstanceState {
      */
     BLOCKING,
     /**
-     * 终止
+     * 终止                //处于阻塞状态的任务实例无法被人为终止
      */
-    TERMINATED0,
+    TERMINATED,
     /**
      * 完成
      */
@@ -31,9 +31,5 @@ public enum InstanceState {
      */
     DIE;
 
-    static {
-        //todo  读取配置中心的重试阈值配置，没有则取默认3
-        // 根据配置使用EnumUtil.addEnum动态增加枚举值
-        //  然后正常使用枚举即可
-    }
+
 }
