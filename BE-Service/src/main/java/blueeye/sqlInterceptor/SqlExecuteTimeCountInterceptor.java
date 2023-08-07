@@ -1,5 +1,6 @@
-package com.sqlInterceptor;
+package blueeye.sqlInterceptor;
 
+import blueeye.context.BlueEyeContext;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.plugin.*;
@@ -10,6 +11,9 @@ import java.util.HashSet;
 import java.util.Properties;
 
 
+/**
+ * @author song
+ */
 @Intercepts({@Signature(type = StatementHandler.class, method = "query", args = {Statement.class, ResultHandler.class}),
         @Signature(type = StatementHandler.class, method = "update", args = {Statement.class}),
         @Signature(type = StatementHandler.class, method = "batch", args = {Statement.class})})
@@ -36,10 +40,10 @@ public class SqlExecuteTimeCountInterceptor implements Interceptor {
             String sql = boundSql.getSql();
             if (sqls.isEmpty()) {
                 //集合为空，无需判断，直接将拦截的sql的执行数据上传到BlueEye
-                System.out.println("executing SQL:" + sql + "time:" + timeCount);
+                BlueEyeContext.dataCenter.uploadSqlData(sql,timeCount);
             } else if (sqls.contains(sql)) {
                 //集合不为空且当前sql在集合中将拦截的sql的执行数据上传到BlueEye
-                System.out.println("executing SQL:" + sql + "time:" + timeCount);
+                BlueEyeContext.dataCenter.uploadSqlData(sql,timeCount);
             }
 
         }
