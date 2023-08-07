@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Alert>
+    <wx wxToken="" wxAppid="" wxSecret="" wxTemplateId="" ></wx>
+    <note accessKey="" accessKeySecret="" signName="" templateCode="" regionId=""></note>
+    <mail mailUser="" mailPassword=""></mail>
+    <phone></phone>
+    <queueCapacity>1</queueCapacity>
+</Alert>
