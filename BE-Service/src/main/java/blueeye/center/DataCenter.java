@@ -1,19 +1,23 @@
-package com.container;
+package blueeye.center;
 
-import com.pojo.task.ExecuteCallback;
-import com.rdb.Snapshot;
-import com.pojo.metric.ExecutorsData;
-import com.pojo.metric.MetricsType;
-import com.pojo.metric.SystemData;
-import com.pojo.metric.TagData;
-import com.pojo.task.InterfaceTask;
-import com.pojo.task.MonitorTask;
-import com.pojo.task.ScriptTask;
+
+import blueeye.container.*;
+import blueeye.mapping.MetricTaskIdMapping;
+import blueeye.pojo.metric.MetricData;
+import blueeye.pojo.metric.MetricsType;
+import blueeye.pojo.metric.Tag.TagData;
+import blueeye.pojo.metric.dataSourece.DataSourceData;
+import blueeye.pojo.metric.executor.ExecutorData;
+import blueeye.pojo.metric.intf.InterfaceData;
+import blueeye.pojo.metric.sql.SqlData;
+import blueeye.pojo.task.impl.TimerTask;
+import blueeye.pojo.task.impl.intf.InterfaceTask;
+import blueeye.pojo.task.impl.monitor.MonitorTask;
+import blueeye.pojo.task.impl.script.ScriptTask;
+import blueeye.rdb.Snapshot;
 import lombok.Data;
 
 import java.sql.Timestamp;
-
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -24,19 +28,57 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Data
 public class DataCenter {
 
-
+    /**
+     * 元任务容器
+     */
     private TaskContainer<MonitorTask> metaTasks;
+    /**
+     * 监控(调度）任务容器
+     */
     private TaskContainer<MonitorTask> monitorTasks;
+    /**
+     * 接口任务容器
+     */
     private TaskContainer<InterfaceTask> interfaceTasks;
+    /**
+     * 脚本任务容器
+     */
     private TaskContainer<ScriptTask> scriptTasks;
+    /**
+     * 指标数据容器
+     */
     private MetricDataContainer metrics;
+    /**
+     * 实例容器
+     */
     private InstanceContainer instances;
+    /**
+     * 报警记录容器
+     */
     private AlertRecordContainer records;
+    /**
+     * 监控指标与对应监控任务id映射
+     */
     private MetricTaskIdMapping mapping;
+    /**
+     * 任务原子id
+     */
     private AtomicInteger taskId;
+    /**
+     * 实例原子id
+     */
     private AtomicInteger instanceId;
+    /**
+     * 数据原子id
+     */
     private AtomicInteger dataId;
+    /**
+     * 报警记录原子id
+     */
     private AtomicInteger recordId;
+    /**
+     * 配置容器
+     */
     private ConfigContainer config;
 
     public DataCenter(DataCenterBuilder builder) {
@@ -61,44 +103,55 @@ public class DataCenter {
     /**
      * 作为用户自定义数据的打点上传入口
      *
-     * @param name  tag名称
-     * @param data  数据
+     * @param name tag名称
+     * @param data 数据
      */
     public <T> void uploadTagData(String name, T data) {
-        //先判断是否为该tag的首次上传
+        //先判断是否为该类tag的首次上传
         Integer id = mapping.getId(MetricsType.Tag, name);
         if (id == null) {
-            //首次上传，分配给tag任务id,存储映射
+            //首次上传，为该tag绑定虚拟任务id,存储映射
             id = taskId.incrementAndGet();
             mapping.putMapping(MetricsType.Tag, name, id);
         }
+
         //获取对应类型的Tag对象
         TagData<T> tagData = new TagData<T>(data);
-        tagData.setId(dataId.incrementAndGet());
+        tagData.setId(dataId.getAndIncrement());
         tagData.setTaskId(id);
+        tagData.setInstanceId(instanceId.getAndIncrement());
         tagData.setCreateTime(new Timestamp(System.currentTimeMillis()));
         //添加对象
         this.metrics.addMetricData(tagData);
     }
 
-
-
     /**
-     * 最新数据与之前数据无关，直接上传数据对象
+     * 根据id查找TimerTask
      *
-     * @param data
+     * @param id
+     * @return
      */
-    public void uploadSystemData(SystemData data) {
-
+    public TimerTask getTimerTaskById(Integer id) {
+        TimerTask task = metaTasks.selectById(id);
+        if (task == null) {
+            task = monitorTasks.selectById(id);
+        }
+        if (task == null) {
+            task = interfaceTasks.selectById(id);
+        }
+        if (task == null) {
+            task = scriptTasks.selectById(id);
+        }
+        return task;
     }
 
     /**
-     * 接口qps统计计数，依赖之前数据
+     * 作为数据库连接池数据上传入口
      *
-     * @param interfaceName
+     * @param data
      */
-    public void uploadInterfaceData(String interfaceName) {
-        //先查出之前的最新数据，在此基础上生成最新数据
+    public void uploadDataSource(DataSourceData data) {
+        metrics.addMetricData(data);
     }
 
     /**
@@ -106,9 +159,44 @@ public class DataCenter {
      *
      * @param data
      */
-    public void uploadExecutorsData(ExecutorsData data) {
-
+    public void uploadExecutorData(ExecutorData data) {
+        metrics.addMetricData(data);
     }
+
+    /**
+     * 最新数据与之前数据无关，直接上传数据对象
+     *
+     * @param data
+     */
+    public void uploadSystemData(MetricData data) {
+        metrics.addMetricData(data);
+    }
+
+    /**
+     * 接口qps统计计数，依赖之前数据
+     *
+     * @param interfaceName
+     */
+    public void uploadInterfaceData(String interfaceName, long computingTime, boolean isSuccess) {
+        //根据interfaceName查询taskId
+        Integer id = mapping.getId(MetricsType.Interface, interfaceName);
+        //根据id获取之前的最新数据
+        InterfaceData lastMetricData = (InterfaceData) metrics.getLastMetricData(id);
+        //生成最新数据
+        InterfaceData data = new InterfaceData();
+        data.setId(dataId.getAndIncrement());
+        data.setTaskId(id);
+        data.setCreateTime(new Timestamp(System.currentTimeMillis()));
+        data.setInstanceId(instanceId.getAndIncrement());
+        data.setTotalCount(lastMetricData.getTotalCount() + 1);
+        data.setSuccessCount(isSuccess ? lastMetricData.getSuccessCount() + 1 : lastMetricData.getSuccessCount());
+        data.setFailCount(isSuccess ? lastMetricData.getFailCount() : lastMetricData.getFailCount() + 1);
+        data.setMinComputingTime(Math.min(lastMetricData.getMinComputingTime(), computingTime));
+        data.setMaxComputingTime(Math.max(lastMetricData.getMaxComputingTime(), computingTime));
+        data.setAverageComputingTime((lastMetricData.getAverageComputingTime() * lastMetricData.getTotalCount() + computingTime) / data.getTotalCount());
+        metrics.addMetricData(data);
+    }
+
 
     /**
      * sql执行次数统计和平均耗时依赖之前数据
@@ -117,7 +205,21 @@ public class DataCenter {
      * @param time
      */
     public void uploadSqlData(String sql, long time) {
-        //先查出之前的最新数据，在此基础上生成最新数据
+        //先查出taskId
+        Integer id = mapping.getId(MetricsType.Sql, sql);
+        //查出历史最新数据
+        SqlData lastMetricData = (SqlData) metrics.getLastMetricData(id);
+        //生成最新数据
+        SqlData sqlData = new SqlData();
+        sqlData.setCreateTime(new Timestamp(System.currentTimeMillis()));
+        sqlData.setId(dataId.getAndIncrement());
+        sqlData.setTaskId(id);
+        sqlData.setInstanceId(instanceId.getAndIncrement());
+        sqlData.setSql(sql);
+        sqlData.setExecuteCount(lastMetricData.getExecuteCount() + 1);
+        sqlData.setRecentComputingTime(time);
+        sqlData.setAverageComputingTime((lastMetricData.getAverageComputingTime() * lastMetricData.getExecuteCount() + time) / sqlData.getExecuteCount());
+        metrics.addMetricData(sqlData);
     }
 
 
@@ -127,8 +229,7 @@ public class DataCenter {
      * @return
      */
     public Snapshot createSnapshot() {
-        Snapshot snapshot = new DataSnapshot(this);
-        return snapshot;
+        return new DataSnapshot(this);
     }
 
     /**
@@ -178,6 +279,54 @@ public class DataCenter {
             this.metaTasks = metaTasks;
             return this;
         }
+        public DataCenterBuilder monitorTasks(TaskContainer monitorTasks) {
+            this.monitorTasks = monitorTasks;
+            return this;
+        }
+        public DataCenterBuilder interfaceTasks(TaskContainer interfaceTasks) {
+            this.interfaceTasks = interfaceTasks;
+            return this;
+        }
+        public DataCenterBuilder scriptTasks(TaskContainer scriptTasks) {
+            this.scriptTasks = scriptTasks;
+            return this;
+        }
+        public DataCenterBuilder metrics(MetricDataContainer metrics) {
+            this.metrics = metrics;
+            return this;
+        }
+        public DataCenterBuilder instances(InstanceContainer instances) {
+            this.instances = instances;
+            return this;
+        }
+        public DataCenterBuilder records(AlertRecordContainer records) {
+            this.records = records;
+            return this;
+        }
+        public DataCenterBuilder mapping(MetricTaskIdMapping mapping) {
+            this.mapping = mapping;
+            return this;
+        }
+        public DataCenterBuilder taskId(AtomicInteger taskId) {
+            this.taskId = taskId;
+            return this;
+        }
+        public DataCenterBuilder instanceId(AtomicInteger instanceId) {
+            this.instanceId = instanceId;
+            return this;
+        }
+        public DataCenterBuilder dataId(AtomicInteger dataId) {
+            this.dataId = dataId;
+            return this;
+        }
+        public DataCenterBuilder recordId(AtomicInteger recordId) {
+            this.recordId = recordId;
+            return this;
+        }
+        public DataCenterBuilder config(ConfigContainer config) {
+            this.config = config;
+            return this;
+        }
 
         public DataCenter build() {
             return new DataCenter(this);
@@ -187,7 +336,7 @@ public class DataCenter {
     /**
      * 快照,定义为内部类是为了只提供宽接口给数据中心，作用于项目重启时构造数据中心
      */
-    public static class DataSnapshot implements Snapshot {
+    private  class DataSnapshot implements Snapshot {
         private final TaskContainer<MonitorTask> metaTasks;
         private final TaskContainer<MonitorTask> monitorTasks;
         private final TaskContainer<InterfaceTask> interfaceTasks;
