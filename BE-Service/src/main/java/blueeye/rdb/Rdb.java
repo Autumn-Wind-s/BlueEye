@@ -1,9 +1,13 @@
-package com.rdb;
+package blueeye.rdb;
 
-import com.container.DataCenter;
-import com.util.KryoUtil;
+import blueeye.center.DataCenter;
+import blueeye.util.KryoUtil;
 
-import java.io.*;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Optional;
 
 /**
@@ -26,7 +30,10 @@ public class Rdb {
     private final Integer nums;
 
     private Integer num = 0;
-
+    /**
+     * 反序列化生成的对象所属类
+     */
+    private Class aClass;
     /**
      * 项目初始化时创建Rdb服务类
      *
@@ -44,15 +51,14 @@ public class Rdb {
      * 项目重启时创建Rdb
      *
      * @param filePath
-     * @param serializedPath
+     * @param
      * @throws IOException
      */
-    public Rdb(String filePath, Optional<String> serializedPath, Optional<Integer> nums) throws IOException {
-        this.serializedPath = serializedPath.orElse(this.getClass().getClassLoader().getResource("").getPath() + "rdb");
-        this.nums = nums.orElse(2);
+    public Rdb(String filePath) throws IOException {
         this.dataCenter=restore(filePath);
+        this.serializedPath = dataCenter.getConfig().getBlueEyeconfig().getRdbPath();
+        this.nums = dataCenter.getConfig().getBlueEyeconfig().getRdbFileNum();
     }
-
     /**
      * 数据恢复
      *
@@ -67,7 +73,7 @@ public class Rdb {
         in.read(bytes);
         in.close();
         DataCenter dataCenter = new DataCenter();
-        dataCenter.restoreSnapshot(KryoUtil.readObjectFromByteArray(bytes, Snapshot.class));
+        dataCenter.restoreSnapshot(KryoUtil.readObjectFromByteArray(bytes, (Class<Snapshot>) getPrivateClass(DataCenter.class,"DataSnapshot")));
         return dataCenter;
     }
 
@@ -89,5 +95,15 @@ public class Rdb {
 
     public DataCenter getDataCenter() {
         return dataCenter;
+    }
+
+    public Class getPrivateClass(Class c,String className){
+        Class[] declaredClasses = c.getDeclaredClasses();
+        for (Class declaredClass : declaredClasses) {
+            if(declaredClass.getName().equals(c.getName()+"$"+className)){
+                return declaredClass;
+            }
+        }
+        return null;
     }
 }

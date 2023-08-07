@@ -1,4 +1,4 @@
-package com.rdb;
+package blueeye.rdb;
 
 /**
  * @Author SDJin
