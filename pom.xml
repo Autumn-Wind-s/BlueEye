@@ -18,16 +18,21 @@
   under the License.
 -->
 <!-- $Id: pom.xml 642118 2008-03-28 08:04:16Z reinhard $ -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <packaging>pom</packaging>
 
-  <name>BlueEye</name>
+  <name>blueeye</name>
   <modules>
-    <module></module>
+      <module>BE-Mapper</module>
+      <module>BE-Common</module>
+      <module>BE-Util</module>
+      <module>BE-Alert</module>
+      <module>BE-Service</module>
+      <module>BE-Web</module>
   </modules>
-  <groupId>org.example</groupId>
+  <groupId>com.BlueEye</groupId>
   <artifactId>BlueEye</artifactId>
   <version>1.0-SNAPSHOT</version>
 
