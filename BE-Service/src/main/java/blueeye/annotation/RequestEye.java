@@ -1,4 +1,6 @@
-package com.annotation;
+package blueeye.annotation;
+
+import lombok.NonNull;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -13,7 +15,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface RequestEye {
+
     String value();
-    boolean hour() default true;
-    boolean Minute()default true;
+
 }
