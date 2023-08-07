@@ -3,7 +3,7 @@ package blueeye.note;
 /**
  * @Author SDJin
  * @CreationDate 2023/6/26 16:40
- * @Description ：异步
+ * @Description ：阿里云异步短信通知服务
  */
 // This file is auto-generated, don't edit it. Thanks.
 
@@ -21,8 +21,8 @@ public class NoteSender {
     /**
      * 以下属性需用户在配置文件中配置
      */
-    public static String  accessKey="LTAI5tFL1hn1XVwcmWK6MzvE";
-    public static String  accessKeySecret="z1P7rZuWf3TUKSqjBACypfmkHDCjS6";
+    public static String  accessKey="";
+    public static String  accessKeySecret="";
     public static String  signName="BlueEye报警通知";
     public static String  templateCode="SMS_462200080";
     public static String regionId="cn-hangzhou";
