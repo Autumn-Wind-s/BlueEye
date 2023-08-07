@@ -1,4 +1,4 @@
-package com.pojo.metric;
+package blueeye.pojo.metric;
 
 /**
  * @Author SDJin
@@ -7,15 +7,16 @@ package com.pojo.metric;
  */
 public enum MetricsType {
     //接口
-    Request,
+    Interface,
     //sql语句
     Sql,
     //线程池
     Executors,
     //数据源
     DataSource,
-    //系统指标
-    System,
     //打点指标
-    Tag
+    Tag,
+    //系统指标
+    System
+
 }
