@@ -31,6 +31,10 @@
       <module>BE-Alert</module>
       <module>BE-Service</module>
       <module>BE-Web</module>
+      <module>BE-Dispatch</module>
+    <module>BE-Dispatch</module>
+      <module>BE-Start</module>
+    <module>BE-Dis</module>
   </modules>
   <groupId>com.BlueEye</groupId>
   <artifactId>BlueEye</artifactId>

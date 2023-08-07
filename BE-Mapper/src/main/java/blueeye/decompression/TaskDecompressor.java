@@ -5,7 +5,7 @@ import blueeye.pojo.task.impl.TimerTask;
 import blueeye.pojo.task.impl.intf.InterfaceTask;
 import blueeye.pojo.task.impl.monitor.MonitorTask;
 import blueeye.pojo.task.impl.script.ScriptTask;
-import blueeye.util.KryoUtil;
+import blueeye.rdb.KryoUtil;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;

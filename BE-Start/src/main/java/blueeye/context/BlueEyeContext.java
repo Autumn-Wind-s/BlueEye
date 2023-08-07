@@ -1,6 +1,5 @@
 package blueeye.context;
 
-import blueeye.annotation.RequestEye;
 import blueeye.center.DataCenter;
 import blueeye.compression.AlertRecordCompressor;
 import blueeye.compression.MetricDataCompressor;
@@ -8,17 +7,12 @@ import blueeye.compression.TaskCompressor;
 import blueeye.compression.TaskInstanceCompressor;
 import blueeye.config.AlertConfig;
 import blueeye.config.BlueEyeConfig;
-import blueeye.consumer.AlertTaskConsumer;
 import blueeye.container.*;
-import blueeye.dispatch.TimerScheduler;
-import blueeye.email.MailSender;
 import blueeye.filter.RequestFilter;
+import blueeye.manager.AlertManager;
 import blueeye.mapping.MetricTaskIdMapping;
-import blueeye.note.NoteSender;
 import blueeye.persistent.*;
-import blueeye.persistent.defaultImpl.JdbcMapperManager;
 import blueeye.pojo.alert.AlertRecord;
-import blueeye.pojo.alert.AlertRule;
 import blueeye.pojo.instance.InstanceState;
 import blueeye.pojo.instance.TaskInstance;
 import blueeye.pojo.metric.MetricData;
@@ -27,24 +21,20 @@ import blueeye.pojo.metric.dataSourece.DataSourceData;
 import blueeye.pojo.metric.executor.ExecutorData;
 import blueeye.pojo.metric.system.*;
 import blueeye.pojo.po.AlertRecordPo;
+import blueeye.dispatch.TimerScheduler;
 import blueeye.pojo.po.MetricDataPo;
 import blueeye.pojo.po.TaskInstancePo;
 import blueeye.pojo.po.TaskPo;
-import blueeye.pojo.task.impl.TimerTask;
-import blueeye.pojo.task.impl.alert.AlertTask;
 import blueeye.pojo.task.impl.intf.InterfaceTask;
 import blueeye.pojo.task.impl.monitor.ExecuteCallback;
 import blueeye.pojo.task.impl.monitor.MonitorTask;
 import blueeye.pojo.task.impl.script.ScriptTask;
-import blueeye.pojo.user.User;
 import blueeye.rdb.Rdb;
-import blueeye.rdb.Snapshot;
 import blueeye.service.AlertRecordService;
 import blueeye.service.InstanceService;
 import blueeye.service.MetricDataService;
 import blueeye.service.TaskService;
 import blueeye.util.*;
-import blueeye.wx.WxMsSender;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -52,33 +42,16 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
-import oshi.util.GlobalConfig;
-
-
 import javax.servlet.*;
-import javax.servlet.descriptor.JspConfigDescriptor;
 import javax.sql.DataSource;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.sql.Timestamp;
 import java.util.*;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+
 
 /**
  * @Author SDJin
@@ -91,19 +64,12 @@ public class BlueEyeContext {
     public static TimerScheduler timerScheduler;
     public static Rdb rdb;
     public static MapperManager mapperManager;
-
+    public static AlertManager alertManager;
 
     /**
      * 整个平台的初始化方法，外部项目需在启动时执行该方法
      *
-     * @param context
-     * @throws IOException
-     * @throws DocumentException
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws InstantiationException
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
+     * @param context ServletContext
      */
     public void init(ServletContext context) throws IOException, DocumentException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, InterruptedException {
         InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("blueEye.xml");
@@ -119,34 +85,40 @@ public class BlueEyeContext {
             //初始化数据备份/恢复服务，恢复数据中心
             rdb = new Rdb(recoveryFile);
             dataCenter = rdb.getDataCenter();
-            System.out.println(dataCenter);
             //初始化持久化数据读写服务,将这四个对象mapper注入到对应四个Service的静态属性上。
-            initMapper(dataCenter.getConfig().getBlueEyeconfig());
+            mapperManager = MapperManager.initMapperService(dataCenter.getConfig().getBlueEyeconfig());
+            AlertRecordService.alertRecordMapper = mapperManager.alertRecordMapper;
+            InstanceService.instanceMapper = mapperManager.instanceMapper;
+            MetricDataService.metricDataMapper = mapperManager.metricDataMapper;
+            TaskService.taskMapper = mapperManager.taskMapper;
             //初始化报警服务
-            initAlert(dataCenter.getConfig().getAlertConfig());
+            alertManager = new AlertManager();
+            alertManager.initAlert(dataCenter);
             //初始化任务调度服务
-             timerScheduler = new TimerScheduler(Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getTimeSpan()), Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getWheelSize()), Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getCoreThread()), Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getRetryNum()));
+            timerScheduler = new TimerScheduler(Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getTimeSpan()), Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getWheelSize()), Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getCoreThread()), Optional.ofNullable(dataCenter.getConfig().getBlueEyeconfig().getRetryNum()));
+            timerScheduler.setDataCenter(dataCenter);
             //恢复实例执行
             List<TaskInstance> activeInstance = dataCenter.getInstances().getActiveInstance();
             for (TaskInstance instance : activeInstance) {
-                if(instance.getState().equals(InstanceState.BLOCKING)){
+                if (instance.getState().equals(InstanceState.BLOCKING)) {
                     timerScheduler.addBlockTask(instance);
-                } if (instance.getState().equals(InstanceState.RUNNING)){
-                     timerScheduler.getWorkerThreadPool().execute(instance);
-                }else {
-                    instance.setExecutionTime(new Timestamp(System.currentTimeMillis()+instance.getTask().getCycle()));
+                }
+                if (instance.getState().equals(InstanceState.RUNNING)) {
+                    timerScheduler.getWorkerThreadPool().execute(instance);
+                } else {
+                    instance.setExecutionTime(new Timestamp(System.currentTimeMillis() + instance.getTask().getCycle()));
                     timerScheduler.add(instance);
                 }
             }
             //扫描BlueEye注解
-            Set<String> strings = scanRequestEye(dataCenter.getConfig().getBlueEyeconfig().getScanPackageName());
+            Set<String> strings = ClassUtil.scanRequestEye(dataCenter.getConfig().getBlueEyeconfig().getScanPackageName());
             //设计接口qps监控
             setInterfaceMonitor(context, strings);
         } else {
             //进行初始化
-            BlueEyeConfig blueEyeConfig = readBlueEyeConfig(sr, "blueEye.xml");
+            BlueEyeConfig blueEyeConfig = FileUtil.readBlueEyeConfig(sr, "blueEye.xml");
             //读取报警配置文件
-            AlertConfig alertConfig = readAlertConfig(sr, "AlertConfig.xml");
+            AlertConfig alertConfig = FileUtil.readAlertConfig(sr, "AlertConfig.xml");
             //创建数据中心
             DataCenter data = new DataCenter.DataCenterBuilder().metaTasks(new TaskContainer()).monitorTasks(new TaskContainer()).interfaceTasks(new TaskContainer()).scriptTasks(new TaskContainer()).metrics(new MetricDataContainer()).instances(new InstanceContainer()).records(new AlertRecordContainer()).mapping(new MetricTaskIdMapping()).taskId(new AtomicInteger()).instanceId(new AtomicInteger()).dataId(new AtomicInteger()).recordId(new AtomicInteger()).config(new ConfigContainer()).build();
             data.getConfig().setAlertConfig(alertConfig);
@@ -155,11 +127,17 @@ public class BlueEyeContext {
             //初始化数据备份/恢复服务
             rdb = new Rdb(dataCenter, Optional.of(blueEyeConfig.getRdbPath()), Optional.of(blueEyeConfig.getRdbFileNum()));
             //初始化持久化数据读写服务,将这四个对象mapper注入到对应四个Service的静态属性上。
-            initMapper(dataCenter.getConfig().getBlueEyeconfig());
+            mapperManager = MapperManager.initMapperService(dataCenter.getConfig().getBlueEyeconfig());
+            AlertRecordService.alertRecordMapper = mapperManager.alertRecordMapper;
+            InstanceService.instanceMapper = mapperManager.instanceMapper;
+            MetricDataService.metricDataMapper = mapperManager.metricDataMapper;
+            TaskService.taskMapper = mapperManager.taskMapper;
             //初始化报警服务
-            initAlert(dataCenter.getConfig().getAlertConfig());
+            alertManager = new AlertManager();
+            alertManager.initAlert(dataCenter);
             //初始化任务调度服务
             timerScheduler = new TimerScheduler(Optional.ofNullable(blueEyeConfig.getTimeSpan()), Optional.ofNullable(blueEyeConfig.getWheelSize()), Optional.ofNullable(blueEyeConfig.getCoreThread()), Optional.ofNullable(blueEyeConfig.getRetryNum()));
+            timerScheduler.setDataCenter(dataCenter);
             //创建元任务
             createDefaultMetaTask();
             log.info("默认元任务初始化结束");
@@ -167,13 +145,11 @@ public class BlueEyeContext {
             createDefaultMonitorTask();
             log.info("默认监控初始化结束");
             //扫描BlueEye注解
-            Set<String> strings = scanRequestEye(blueEyeConfig.getScanPackageName());
+            Set<String> strings = ClassUtil.scanRequestEye(blueEyeConfig.getScanPackageName());
             log.info("注解扫描结束");
             //设计接口qps监控
-            setInterfaceMonitor(context,strings);
+            setInterfaceMonitor(context, strings);
             log.info("BlueEye初始化结束");
-
-
         }
 
     }
@@ -194,98 +170,11 @@ public class BlueEyeContext {
         mapperManager.destroy();
     }
 
-    /**
-     * 读取BlueEye配置文件
-     *
-     * @param sr
-     * @param name
-     * @return
-     * @throws FileNotFoundException
-     * @throws DocumentException
-     */
-    public BlueEyeConfig readBlueEyeConfig(SAXReader sr, String name) throws FileNotFoundException, DocumentException {
-        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(name);
-        Document doc = sr.read(inputStream);
-        Element rootElement = doc.getRootElement();
-
-        BlueEyeConfig blueEyeConfig = new BlueEyeConfig();
-        //解析用户信息
-
-        blueEyeConfig.setUsers((List<User>) rootElement.element("users").elements().stream().map(object -> {
-            Element element = (Element) object;
-            User user = new User();
-            user.setName(element.elementText("name"));
-            user.setPassword(element.elementText("password"));
-            user.setRole(Integer.parseInt(element.elementText("role")));
-            return user;
-        }).collect(Collectors.toList()));
-        //解析requestEye扫描路径
-        blueEyeConfig.setScanPackageName(rootElement.elementText("scanPackageName"));
-        //解析rdb配置
-        blueEyeConfig.setRdbPath(rootElement.element("rdb").elementText("path"));
-        blueEyeConfig.setRdbFileNum(Integer.parseInt(rootElement.element("rdb").elementText("fileNum")));
-        //解析持久化配置
-        Element persistence = rootElement.element("persistence");
-        blueEyeConfig.setProperties(persistence.elementText("properties"));
-        if ("default".equals(persistence.elementText("mode"))) {
-            blueEyeConfig.setManager("blueeye.persistent.defaultImpl.JdbcMapperManager");
-            blueEyeConfig.setAlertMapper("blueeye.persistent.defaultImpl.JdbcAlertRecordMapper");
-            blueEyeConfig.setInstanceMapper("blueeye.persistent.defaultImpl.JdbcInstanceMapper");
-            blueEyeConfig.setMetricMapper("blueeye.persistent.defaultImpl.JdbcMetricDataMapper");
-            blueEyeConfig.setTaskMapper("blueeye.persistent.defaultImpl.JdbcTaskMapper");
-        } else {
-            blueEyeConfig.setManager(persistence.elementText("manager"));
-            blueEyeConfig.setAlertMapper(persistence.elementText("alertMapper"));
-            blueEyeConfig.setInstanceMapper(persistence.elementText("instanceMapper"));
-            blueEyeConfig.setMetricMapper(persistence.elementText("metricMapper"));
-            blueEyeConfig.setTaskMapper(persistence.elementText("taskMapper"));
-        }
-        //解析时间轮配置
-        blueEyeConfig.setTimeSpan(Long.parseLong(rootElement.element("timeWheel").elementText("timeSpan")));
-        blueEyeConfig.setWheelSize(Integer.parseInt(rootElement.element("timeWheel").elementText("size")));
-        //解析任务执行器配置
-        blueEyeConfig.setCoreThread(Integer.parseInt(rootElement.elementText("coreThread")));
-        //解析实例重试次数
-        blueEyeConfig.setRetryNum(Integer.parseInt(rootElement.elementText("retryNum")));
-        System.out.println(blueEyeConfig);
-        return blueEyeConfig;
-    }
-
-    /**
-     * 读取报警配置文件
-     *
-     * @param sr
-     * @param name
-     * @return
-     * @throws DocumentException
-     * @throws FileNotFoundException
-     */
-    public AlertConfig readAlertConfig(SAXReader sr, String name) throws DocumentException, FileNotFoundException {
-        InputStream alertFile = this.getClass().getClassLoader().getResourceAsStream(name);
-        Document alert = sr.read(alertFile);
-        AlertConfig alertConfig = new AlertConfig();
-        Element root = alert.getRootElement();
-        Element wx = root.element("wx");
-        alertConfig.setWxToken(wx.attributeValue("wxToken"));
-        alertConfig.setWxAppid(wx.attributeValue("wxAppid"));
-        alertConfig.setWxSecret(wx.attributeValue("wxSecret"));
-        alertConfig.setWxTemplateId(wx.attributeValue("wxTemplateId"));
-        Element note = root.element("note");
-        alertConfig.setAccessKey(note.attributeValue("accessKey"));
-        alertConfig.setAccessKeySecret(note.attributeValue("accessKeySecret"));
-        alertConfig.setSignName(note.attributeValue("signName"));
-        alertConfig.setTemplateCode(note.attributeValue("templateCode"));
-        Element mail = root.element("mail");
-        alertConfig.setMailUser(mail.attributeValue("mailUser"));
-        alertConfig.setMailPassword(mail.attributeValue("mailPassword"));
-        alertConfig.setQueueCapacity(Integer.parseInt(root.elementText("queueCapacity")));
-        return alertConfig;
-    }
 
     /**
      * 创建系统默认的监控任务
      */
-    public void createDefaultMonitorTask() {
+    private void createDefaultMonitorTask() {
         addCustomizeTask(Optional.of("cpu监控任务"), Optional.of("负责监控cpu的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -294,7 +183,7 @@ public class BlueEyeContext {
                 //获取cpu利用率和温度
                 CpuUtil.gatherDta(cpuData);
                 //判断数据是否需要报警
-                alertJudge(taskId, cpuData, "cpu");
+                alertManager.alertJudge(taskId, cpuData, "cpu");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(cpuData);
                 return "cpu数据收集和报警完成";
@@ -308,7 +197,7 @@ public class BlueEyeContext {
                 //获取gpu利用率和温度
                 GpuUtil.gatherData(gpuData);
                 //判断数据是否需要报警
-                alertJudge(taskId, gpuData, "gpu");
+                alertManager.alertJudge(taskId, gpuData, "gpu");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(gpuData);
                 return "Gpu数据收集和报警完成";
@@ -322,7 +211,7 @@ public class BlueEyeContext {
                 //获取gc相关数据
                 GcUtil.gatherData(gcData);
                 //判断数据是否需要报警
-                alertJudge(taskId, gcData, "gc");
+                alertManager.alertJudge(taskId, gcData, "gc");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(gcData);
                 return "Gc数据收集和报警完成";
@@ -336,7 +225,7 @@ public class BlueEyeContext {
                 //获取HardDisk相关数据
                 HardDiskUtil.gatherData(hardDiskData);
                 //判断数据是否需要报警
-                alertJudge(taskId, hardDiskData, "hardDiskData");
+                alertManager.alertJudge(taskId, hardDiskData, "hardDiskData");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(hardDiskData);
                 return "hardDiskData数据收集和报警完成";
@@ -350,7 +239,7 @@ public class BlueEyeContext {
                 //获取JvmThread相关数据
                 JvmThreadUtil.gatherData(data);
                 //判断数据是否需要报警
-                alertJudge(taskId, data, "jvmThread");
+                alertManager.alertJudge(taskId, data, "jvmThread");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(data);
                 return "jvmThread数据收集和报警完成";
@@ -364,7 +253,7 @@ public class BlueEyeContext {
                 //获取Heap相关数据
                 HeapUtil.gatherData(data);
                 //判断数据是否需要报警
-                alertJudge(taskId, data, "heap");
+                alertManager.alertJudge(taskId, data, "heap");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(data);
                 return "heap数据收集和报警完成";
@@ -378,7 +267,7 @@ public class BlueEyeContext {
                 //获取load相关数据
                 LoadUtil.gatherData(data);
                 //判断数据是否需要报警
-                alertJudge(taskId, data, "load");
+                alertManager.alertJudge(taskId, data, "load");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(data);
                 return "load数据收集和报警完成";
@@ -392,7 +281,7 @@ public class BlueEyeContext {
                 //获取MemoryData相关数据
                 MemoryUtil.gatherData(data);
                 //判断数据是否需要报警
-                alertJudge(taskId, data, "memory");
+                alertManager.alertJudge(taskId, data, "memory");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(data);
                 return "memory数据收集和报警完成";
@@ -406,7 +295,7 @@ public class BlueEyeContext {
                 //获取NoHeap相关数据
                 NoHeapUtil.gatherData(data);
                 //判断数据是否需要报警
-                alertJudge(taskId, data, "noHeap");
+                alertManager.alertJudge(taskId, data, "noHeap");
                 //上传数据
                 dataCenter.getMetrics().addMetricData(data);
                 return "noHeap数据收集和报警完成";
@@ -418,7 +307,7 @@ public class BlueEyeContext {
     /**
      * 创建系统默认的元任务
      */
-    public void createDefaultMetaTask() {
+    private void createDefaultMetaTask() {
         addMetaTask(Optional.of("过期报警记录淘汰元任务"), Optional.of("负责淘汰内存中已到期报警记录"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -513,66 +402,6 @@ public class BlueEyeContext {
 //        todo 监控系统各组件的元任务
     }
 
-    /**
-     * 扫描BlueEye注解
-     *
-     * @param packageName
-     * @return
-     */
-    public Set<String> scanRequestEye(String packageName) {
-        HashSet<String> strings = new HashSet<>();
-        Set<Class<?>> classSet = ClassUtil.extractPackageClass(packageName);
-        for (Class<?> aClass : classSet) {
-            for (Method method : aClass.getDeclaredMethods()) {
-                if (method.isAnnotationPresent(RequestEye.class)) {
-                    //当扫描到RequestEye注解后记录对应的接口记录
-                    strings.add(method.getDeclaredAnnotation(RequestEye.class).value());
-                }
-            }
-        }
-        return strings;
-    }
-
-    /**
-     * 初始化持久化数据读写服务
-     *
-     * @param config
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws InstantiationException
-     * @throws IllegalAccessException
-     */
-    public void initMapper(BlueEyeConfig config) throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
-        Constructor<?> constructor = Class.forName(config.getManager()).getConstructor(AlertRecordMapper.class, InstanceMapper.class, MetricDataMapper.class, TaskMapper.class, String.class);
-        JdbcMapperManager manager = (JdbcMapperManager) constructor.newInstance(Class.forName(config.getAlertMapper()).newInstance(), Class.forName(config.getInstanceMapper()).newInstance(), Class.forName(config.getMetricMapper()).newInstance(), Class.forName(config.getTaskMapper()).newInstance(), config.getProperties());
-        manager.init();
-        mapperManager = manager;
-        AlertRecordService.alertRecordMapper = mapperManager.alertRecordMapper;
-        InstanceService.instanceMapper = mapperManager.instanceMapper;
-        MetricDataService.metricDataMapper = mapperManager.metricDataMapper;
-        TaskService.taskMapper = mapperManager.taskMapper;
-    }
-
-    /**
-     * 初始化报警服务
-     *
-     * @param alertConfig
-     */
-    public void initAlert(AlertConfig alertConfig) {
-        AlertRecordService.queue = new LinkedBlockingQueue<>(alertConfig.getQueueCapacity());
-        new AlertTaskConsumer().start();
-        WxMsSender.token = alertConfig.getWxToken();
-        WxMsSender.wxAppid = alertConfig.getWxAppid();
-        WxMsSender.wxSecret = alertConfig.getWxSecret();
-        WxMsSender.wxTemplateId = alertConfig.getWxTemplateId();
-        NoteSender.accessKey = alertConfig.getAccessKey();
-        NoteSender.accessKeySecret = alertConfig.getAccessKeySecret();
-        NoteSender.signName = alertConfig.getSignName();
-        NoteSender.regionId = alertConfig.getRegionId();
-        NoteSender.templateCode = alertConfig.getTemplateCode();
-        MailSender.mailUser = alertConfig.getMailUser();
-        MailSender.mailPassword = alertConfig.getMailPassword();
-    }
 
     /**
      * 设置接口qps监控
@@ -580,7 +409,7 @@ public class BlueEyeContext {
      * @param servletContext
      * @param set
      */
-    public void setInterfaceMonitor(ServletContext servletContext, Set<String> set) {
+    private void setInterfaceMonitor(ServletContext servletContext, Set<String> set) {
         try {
             //添加接口过滤器
             RequestFilter filter = servletContext.createFilter(RequestFilter.class);
@@ -609,24 +438,29 @@ public class BlueEyeContext {
         }
         // 生成监控任务，定义监控逻辑
         int taskId = dataCenter.getTaskId().getAndIncrement();
-        MonitorTask task = new MonitorTask((id, instanceId) -> {
-            ExecutorData data = new ExecutorData();
-            data.setId(dataCenter.getDataId().getAndIncrement());
-            data.setTaskId(taskId);
-            data.setInstanceId(instanceId);
-            data.setCreateTime(new Timestamp(System.currentTimeMillis()));
-            data.setCurrentUsage((double) (executor.getPoolSize() / executor.getMaximumPoolSize()));
-            data.setPeakUsage((double) (executor.getLargestPoolSize() / executor.getMaximumPoolSize()));
-            data.setCorePoolSize(executor.getCorePoolSize());
-            data.setMaxPoolSize(executor.getMaximumPoolSize());
-            data.setCurrentCount(executor.getPoolSize());
-            data.setActiveCount(executor.getActiveCount());
-            data.setLargestCount(executor.getLargestPoolSize());
-            data.setBlockQueueSize(executor.getQueue().size() + executor.getQueue().remainingCapacity());
-            data.setQueueOccupiedSize(executor.getQueue().remainingCapacity());
-            data.setQueueSurplusSize(executor.getQueue().size());
-            data.setCompletedTaskCount(executor.getCompletedTaskCount());
-            return "线程池数据收集成功";
+        MonitorTask task = new MonitorTask(new ExecuteCallback() {
+            @Override
+            public String execute(int taskId, int instanceId) throws Exception {
+                //收集数据
+                ExecutorData data = new ExecutorData();
+                setCommon(data, taskId, instanceId);
+                data.setCurrentUsage((double) (executor.getPoolSize() / executor.getMaximumPoolSize()));
+                data.setPeakUsage((double) (executor.getLargestPoolSize() / executor.getMaximumPoolSize()));
+                data.setCorePoolSize(executor.getCorePoolSize());
+                data.setMaxPoolSize(executor.getMaximumPoolSize());
+                data.setCurrentCount(executor.getPoolSize());
+                data.setActiveCount(executor.getActiveCount());
+                data.setLargestCount(executor.getLargestPoolSize());
+                data.setBlockQueueSize(executor.getQueue().size() + executor.getQueue().remainingCapacity());
+                data.setQueueOccupiedSize(executor.getQueue().remainingCapacity());
+                data.setQueueSurplusSize(executor.getQueue().size());
+                data.setCompletedTaskCount(executor.getCompletedTaskCount());
+                //判断数据是否需要报警
+                alertManager.alertJudge(taskId, data, "executor");
+                //上传数据
+                dataCenter.uploadExecutorData(data);
+                return "线程池数据收集成功";
+            }
         });
         //分配任务id
         task.setTaskId(taskId);
@@ -654,7 +488,7 @@ public class BlueEyeContext {
      * @param dataSourceName
      * @param dataSource
      */
-    public static Boolean monitorDataSource(String dataSourceName, DataSource dataSource, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
+    public static boolean monitorDataSource(String dataSourceName, DataSource dataSource, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
         //判重
         if (!dataCenter.getMapping().isContains(MetricsType.DataSource, dataSourceName)) {
             return false;
@@ -664,41 +498,44 @@ public class BlueEyeContext {
         // 生成监控任务，定义监控逻辑
         if (dataSource instanceof ComboPooledDataSource) {
             ComboPooledDataSource ds = (ComboPooledDataSource) dataSource;
-            task = new MonitorTask((id, instanceId) -> {
-                DataSourceData data = new DataSourceData();
-                data.setId(dataCenter.getDataId().getAndIncrement());
-                data.setTaskId(taskId);
-                data.setInstanceId(instanceId);
-                data.setCreateTime(new Timestamp(System.currentTimeMillis()));
-                data.setDatabaseName(dataSourceName);
-                data.setDatabaseType(ds.getConnection().getMetaData().getDatabaseProductName());
-                data.setUsername(ds.getUser());
-                data.setPassword(ds.getPassword());
-                data.setUrl(ds.getJdbcUrl());
-                data.setDriverClass(ds.getDriverClass());
-                data.setInitialPoolSize(ds.getInitialPoolSize());
-                data.setMaxPoolSize(ds.getMaxPoolSize());
-                data.setMinPoolSize(ds.getMinPoolSize());
-                data.setReadOnly(ds.getConnection().isReadOnly());
-                data.setDefaultTransactionIsolation(ds.getConnection().getMetaData().getDefaultTransactionIsolation());
-                data.setAutoCommit(ds.getConnection().getAutoCommit());
-                data.setThreadsAwaiting(ds.getNumHelperThreads());
-                data.setIleConnections(ds.getNumIdleConnections());
-                data.setBusyConnections(ds.getNumBusyConnections());
-                data.setConnections(ds.getNumConnections());
-                //上传数据
-                dataCenter.uploadDataSource(data);
-                return "连接池数据收集成功";
+            task = new MonitorTask(new ExecuteCallback() {
+                @Override
+                public String execute(int taskId, int instanceId) throws Exception {
+                    //收集数据
+                    DataSourceData data = new DataSourceData();
+                    data.setId(dataCenter.getDataId().getAndIncrement());
+                    data.setTaskId(taskId);
+                    data.setInstanceId(instanceId);
+                    data.setCreateTime(new Timestamp(System.currentTimeMillis()));
+                    data.setDatabaseName(dataSourceName);
+                    data.setDatabaseType(ds.getConnection().getMetaData().getDatabaseProductName());
+                    data.setUsername(ds.getUser());
+                    data.setPassword(ds.getPassword());
+                    data.setUrl(ds.getJdbcUrl());
+                    data.setDriverClass(ds.getDriverClass());
+                    data.setInitialPoolSize(ds.getInitialPoolSize());
+                    data.setMaxPoolSize(ds.getMaxPoolSize());
+                    data.setMinPoolSize(ds.getMinPoolSize());
+                    data.setReadOnly(ds.getConnection().isReadOnly());
+                    data.setDefaultTransactionIsolation(ds.getConnection().getMetaData().getDefaultTransactionIsolation());
+                    data.setAutoCommit(ds.getConnection().getAutoCommit());
+                    data.setThreadsAwaiting(ds.getNumHelperThreads());
+                    data.setIleConnections(ds.getNumIdleConnections());
+                    data.setBusyConnections(ds.getNumBusyConnections());
+                    data.setConnections(ds.getNumConnections());
+                    //判断是否需要报警
+                    alertManager.alertJudge(taskId, data, "DataSource");
+                    //上传数据
+                    dataCenter.uploadDataSource(data);
+                    return "连接池数据收集成功";
+                }
             });
 
         } else {
             DruidDataSource ds = (DruidDataSource) dataSource;
             task = new MonitorTask((id, instanceId) -> {
                 DataSourceData data = new DataSourceData();
-                data.setId(dataCenter.getDataId().getAndIncrement());
-                data.setTaskId(taskId);
-                data.setInstanceId(instanceId);
-                data.setCreateTime(new Timestamp(System.currentTimeMillis()));
+                setCommon(data,taskId,instanceId);
                 data.setDatabaseName(dataSourceName);
                 data.setDatabaseType(ds.getConnection().getMetaData().getDatabaseProductName());
                 data.setUsername(ds.getUsername());
@@ -768,14 +605,14 @@ public class BlueEyeContext {
     }
 
     /**
-     * 作为用户元任务添加的入口
+     * 作为元任务添加的入口
      *
      * @param taskName
      * @param taskDescription
      * @param preTask
      * @param executeCallback
      */
-    public static boolean addMetaTask(Optional<String> taskName, Optional<String> taskDescription, ExecuteCallback executeCallback, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
+    private static boolean addMetaTask(Optional<String> taskName, Optional<String> taskDescription, ExecuteCallback executeCallback, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
         MonitorTask task = new MonitorTask(executeCallback);
         task.setTaskId(dataCenter.getTaskId().getAndIncrement());
         task.setTaskName(taskName.orElse("元任务任务") + task.getTaskId());
@@ -793,22 +630,6 @@ public class BlueEyeContext {
     }
 
 
-    /**
-     * 判断前置任务是否已执行
-     *
-     * @return
-     */
-    public static boolean checkPre(int taskId) {
-        //根据任务id查询前置任务id数组，遍历数组判断每个前置任务是否有已执行完成的实例
-        TimerTask task = dataCenter.getTimerTaskById(taskId);
-        for (Integer integer : task.getPreTask()) {
-            if (!BlueEyeContext.dataCenter.getTimerTaskById(integer).getIsExecuted()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private static void setCommon(MetricData data, int taskId, int instanceId) {
         data.setTaskId(taskId);
         data.setId(dataCenter.getDataId().getAndIncrement());
@@ -816,20 +637,4 @@ public class BlueEyeContext {
         data.setCreateTime(new Timestamp(System.currentTimeMillis()));
     }
 
-    private static void alertJudge(int taskId, MetricData data, String dataName) throws InterruptedException, IllegalAccessException {
-        //判断数据是否需要报警
-        ConcurrentHashMap<Field, AlertRule> map = dataCenter.getConfig().getMetricAlertConfig().get(taskId);
-        if (map != null) {
-            for (Map.Entry<Field, AlertRule> entry : map.entrySet()) {
-                AlertTask alertTask = entry.getValue().getAlertTask(entry.getKey().get(data));
-                if (alertTask != null) {
-                    alertTask.setTaskId(dataCenter.getTaskId().getAndIncrement());
-                    alertTask.setTaskName(dataName + "数据报警任务" + alertTask.getTaskId());
-                    alertTask.setTaskDescription("负责" + dataName + "数据报警通知");
-                    AlertRecordService.handleAlertTask(alertTask);
-                }
-            }
-
-        }
-    }
 }

@@ -1,9 +1,7 @@
 package blueeye.service;
 
 import blueeye.persistent.AlertRecordMapper;
-import blueeye.pojo.task.impl.alert.AlertTask;
 
-import java.util.concurrent.BlockingQueue;
 
 /**
  * @Author SDJin
@@ -12,9 +10,6 @@ import java.util.concurrent.BlockingQueue;
  */
 public class AlertRecordService {
     public static AlertRecordMapper alertRecordMapper;
-    public static BlockingQueue<AlertTask> queue ;
-    public static void handleAlertTask(AlertTask task) throws InterruptedException {
-        queue.put(task);
-    }
+
 
 }

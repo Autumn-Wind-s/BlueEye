@@ -1,5 +1,11 @@
 package blueeye.persistent;
 
+import blueeye.config.BlueEyeConfig;
+import blueeye.persistent.defaultImpl.JdbcMapperManager;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+
 /**
  * @Author SDJin
  * @CreationDate 2023/2/16 17:39
@@ -30,4 +36,21 @@ public abstract class MapperManager {
      * 主要做数据持久化的终止工作，例如释放资源
      */
     public abstract void destroy();
+
+    /**
+     * 初始化持久化数据读写服务
+     *
+     * @param config
+     * @throws ClassNotFoundException
+     * @throws NoSuchMethodException
+     * @throws InstantiationException
+     * @throws IllegalAccessException
+     */
+    public static MapperManager initMapperService(BlueEyeConfig config) throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+        Constructor<?> constructor = Class.forName(config.getManager()).getConstructor(AlertRecordMapper.class, InstanceMapper.class, MetricDataMapper.class, TaskMapper.class, String.class);
+        MapperManager manager = (MapperManager) constructor.newInstance(Class.forName(config.getAlertMapper()).newInstance(), Class.forName(config.getInstanceMapper()).newInstance(), Class.forName(config.getMetricMapper()).newInstance(), Class.forName(config.getTaskMapper()).newInstance(), config.getProperties());
+        manager.init();
+        return manager;
+    }
+
 }

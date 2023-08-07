@@ -1,12 +1,9 @@
 package blueeye.dispatch;
 
-import blueeye.context.BlueEyeContext;
 import blueeye.pojo.instance.InstanceState;
 import blueeye.pojo.instance.TaskInstance;
-import blueeye.pojo.task.impl.TimerTask;
 import lombok.extern.slf4j.Slf4j;
 
-import java.sql.Timestamp;
 import java.util.Optional;
 import java.util.concurrent.*;
 
@@ -61,7 +58,7 @@ public class TimerThreadPool extends ThreadPoolExecutor {
             throw new RuntimeException("终止");
         }
         //判断前置任务是否已经执行完成，走到这一步说明任务状态不为终止，
-        if (!BlueEyeContext.checkPre(taskInstance.getTaskId())) {
+        if (!timerLauncher.checkPre(taskInstance.getTaskId())) {
             //前置任务未执行完，抛出异常阻止任务的执行
             throw new RuntimeException("阻塞");
         }

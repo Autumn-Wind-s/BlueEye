@@ -1,4 +1,4 @@
-package blueeye.util;
+package blueeye.rdb;
 
 
 import com.esotericsoftware.kryo.Kryo;

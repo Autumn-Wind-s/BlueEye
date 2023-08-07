@@ -1,12 +1,11 @@
 package blueeye.consumer;
 
-import blueeye.context.BlueEyeContext;
 import blueeye.email.MailSender;
+import blueeye.manager.AlertManager;
 import blueeye.note.NoteSender;
 import blueeye.pojo.alert.AlertMethod;
 import blueeye.pojo.alert.AlertRecord;
 import blueeye.pojo.task.impl.alert.AlertTask;
-import blueeye.service.AlertRecordService;
 import blueeye.wx.WxMsSender;
 
 import java.io.IOException;
@@ -19,12 +18,18 @@ import java.util.concurrent.ExecutionException;
  * @Description ：
  */
 public class AlertTaskConsumer extends Thread {
+    private AlertManager manager;
+
+    public AlertTaskConsumer(AlertManager manager) {
+        this.manager = manager;
+    }
+
     @Override
     public void run() {
         while (true) {
             AlertTask task =null;
             try {
-                task = AlertRecordService.queue.take();
+                task = manager.getQueue().take();
             } catch (InterruptedException e) {
                 //线程阻塞被打断，继续开始
                 continue;
@@ -51,7 +56,7 @@ public class AlertTaskConsumer extends Thread {
                 alertRecord.setContent("报警内容："+task.getContent()+"\n操作结果："+ e.getMessage());
             }
             //  将AlertRecord添加到数据中心
-            BlueEyeContext.dataCenter.getRecords().addAlertRecord(alertRecord);
+           manager.getDataCenter().getRecords().addAlertRecord(alertRecord);
         }
     }
 }

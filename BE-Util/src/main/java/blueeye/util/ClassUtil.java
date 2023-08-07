@@ -1,10 +1,13 @@
 package blueeye.util;
 
 
+import blueeye.annotation.RequestEye;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
@@ -62,9 +65,7 @@ public class ClassUtil {
 
         //获取类加载器
         ClassLoader classLoader = getClassLoader();
-        System.out.println(packageName);
         String s = packageName.replaceAll("\\.", "/");
-        System.out.println(s);
         //通过类加载器获取到加载的资源,replace是字符或字符串匹配替换，replaceAll是字符或正则替换
         URL url = classLoader.getResource(packageName.replaceAll("\\.", "/"));
         if (null == url) {
@@ -143,6 +144,20 @@ public class ClassUtil {
      */
     public static ClassLoader getClassLoader() {
         return Thread.currentThread().getContextClassLoader();
+    }
+
+    public static Set<String> scanRequestEye(String packageName) {
+        HashSet<String> strings = new HashSet<>();
+        Set<Class<?>> classSet = ClassUtil.extractPackageClass(packageName);
+        for (Class<?> aClass : classSet) {
+            for (Method method : aClass.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(RequestEye.class)) {
+                    //当扫描到RequestEye注解后记录对应的接口记录
+                    strings.add(method.getDeclaredAnnotation(RequestEye.class).value());
+                }
+            }
+        }
+        return strings;
     }
 
 }

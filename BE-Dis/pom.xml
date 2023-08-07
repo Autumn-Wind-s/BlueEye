@@ -9,29 +9,15 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <artifactId>BE-Dis</artifactId>
     <dependencies>
         <dependency>
             <groupId>com.BlueEye</groupId>
             <artifactId>BE-Common</artifactId>
             <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.BlueEye</groupId>
-            <artifactId>BE-Util</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid</artifactId>
-            <version>1.1.8</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-jdbc</artifactId>
-            <version>5.0.9.RELEASE</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
-    <artifactId>BE-Mapper</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>

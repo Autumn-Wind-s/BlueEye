@@ -1,9 +1,10 @@
 package blueeye.dispatch;
 
 
-import blueeye.context.BlueEyeContext;
+import blueeye.center.DataCenter;
 import blueeye.pojo.instance.InstanceState;
 import blueeye.pojo.instance.TaskInstance;
+import blueeye.pojo.task.impl.TimerTask;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +43,10 @@ public class TimerScheduler implements Timer {
      * 包括轮询delayQueue获取到期任务实例和轮询queue释放阻塞任务实例的两个守护线程
      */
     private ExecutorService bossThreadPool;
-
+    /**
+     * 数据中心
+     */
+    private DataCenter dataCenter;
     /**
      * @param tickMs       时间轮中每格的时间跨度
      * @param wheelSize    每层时间轮的总格数
@@ -72,7 +76,7 @@ public class TimerScheduler implements Timer {
             while (true) {
                 for (TaskInstance taskInstance : queue) {
                     //判断前置任务是否执行完成
-                    if (BlueEyeContext.checkPre(taskInstance.getTaskId())) {
+                    if (checkPre(taskInstance.getTaskId())) {
                         //更改状态为RUNNING
                         taskInstance.setState(InstanceState.RUNNING);
                         //重新执行任务
@@ -97,8 +101,8 @@ public class TimerScheduler implements Timer {
             }
 
             if (taskInstance.getTask().getCycle() > 0) {
-                TaskInstance instance = new TaskInstance(BlueEyeContext.dataCenter.getInstanceId().getAndIncrement(), taskInstance.getTaskId(), InstanceState.READY, 1, new Timestamp(taskInstance.getExecutionTime().getTime() + taskInstance.getTask().getCycle()), taskInstance.getTask());
-                BlueEyeContext.dataCenter.getInstances().addInstance(instance);
+                TaskInstance instance = new TaskInstance(dataCenter.getInstanceId().getAndIncrement(), taskInstance.getTaskId(), InstanceState.READY, 1, new Timestamp(taskInstance.getExecutionTime().getTime() + taskInstance.getTask().getCycle()), taskInstance.getTask());
+                dataCenter.getInstances().addInstance(instance);
                 add(instance);
             }
         }
@@ -148,5 +152,19 @@ public class TimerScheduler implements Timer {
         this.timeWheel = null;
     }
 
-
+    /**
+     * 判断前置任务是否已执行
+     *
+     * @return
+     */
+    public  boolean checkPre(int taskId) {
+        //根据任务id查询前置任务id数组，遍历数组判断每个前置任务是否有已执行完成的实例
+        TimerTask task = dataCenter.getTimerTaskById(taskId);
+        for (Integer integer : task.getPreTask()) {
+            if (!dataCenter.getTimerTaskById(integer).getIsExecuted()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

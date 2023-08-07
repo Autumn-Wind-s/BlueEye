@@ -22,10 +22,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class AlertController {
 
-    /**
-     * 需根据用户的需求配置容量
-     */
-    public static BlockingQueue<AlertTask> queue ;
 
 
     //    @RequestMapping("wx")
