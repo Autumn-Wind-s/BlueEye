@@ -1,5 +1,6 @@
-package SystemMonitorTest;
+package blueeye.util;
 
+import blueeye.pojo.metric.system.GpuData;
 import com.sun.jna.Platform;
 import org.junit.Test;
 
@@ -12,9 +13,8 @@ import java.io.InputStreamReader;
  * @CreationDate 2023/2/22 21:15
  * @Description ：根据shell命令获取系统GPU状态
  */
-public class GpuTest {
-    @Test
-    public void test() throws Exception {
+public class GpuUtil {
+    public static void gatherData(GpuData data) throws Exception {
         Process process = null;
         try {
             if (Platform.isWindows()) {
@@ -23,8 +23,6 @@ public class GpuTest {
                 String[] shell = {"/bin/bash", "-c", "nvidia-smi"};
                 process = Runtime.getRuntime().exec(shell);
             }
-
-//            process.getOutputStream().close();
         } catch (IOException e) {
             e.printStackTrace();
             throw new Exception("显卡不存在或获取显卡信息失败");
@@ -33,13 +31,15 @@ public class GpuTest {
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
         StringBuffer stringBuffer = new StringBuffer();
-        ;
         String line = "";
         while ((line = reader.readLine()) != null) {
             stringBuffer.append(line + "\n");
         }
         //分割字符串可获取GPU温度和使用率
-        System.out.println(stringBuffer.toString());
-
+        String[] split=stringBuffer.toString().split("\n")[9].split("\\s+");
+        data.setUsageRate(Double.parseDouble(split[2].substring(0,split[2].length()-1)));
+        data.setTemperature(Double.parseDouble(split[12].substring(0,split[12].length()-1)));
     }
+
+
 }

@@ -1,21 +1,15 @@
-package com.util;
-
+package blueeye.util;
 
 
 import com.esotericsoftware.kryo.Kryo;
-
 import com.esotericsoftware.kryo.io.Input;
-
 import com.esotericsoftware.kryo.io.Output;
-
 import org.apache.commons.codec.binary.Base64;
-
 import org.objenesis.strategy.StdInstantiatorStrategy;
 
-
-
-import java.io.*;
-
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 
 
 /**
@@ -95,8 +89,8 @@ public class KryoUtil {
      */
 
     public static Kryo getInstance() {
-
-        return kryoLocal.get();
+        Kryo kryo = kryoLocal.get();
+        return kryo;
 
     }
 
@@ -271,8 +265,7 @@ public class KryoUtil {
 
         Kryo kryo = getInstance();
 
-        kryo.writeObject(output, obj);
-
+        kryo.writeObjectOrNull(output, obj,obj.getClass());
         output.flush();
 
 
@@ -334,16 +327,11 @@ public class KryoUtil {
     @SuppressWarnings("unchecked")
 
     public static <T> T readObjectFromByteArray(byte[] byteArray, Class<T> clazz) {
-
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArray);
-
         Input input = new Input(byteArrayInputStream);
-
-
-
         Kryo kryo = getInstance();
 
-        return kryo.readObject(input, clazz);
+        return kryo.readObjectOrNull(input, clazz);
 
     }
 

@@ -1,4 +1,4 @@
-package com.util;
+package blueeye.util;
 
 import java.io.BufferedReader;
 import java.io.IOException;

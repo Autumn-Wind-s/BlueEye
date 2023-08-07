@@ -1,6 +1,5 @@
-package com.util;
+package blueeye.util;
 
-import com.pojo.instance.InstanceState;
 import sun.reflect.ConstructorAccessor;
 import sun.reflect.FieldAccessor;
 import sun.reflect.ReflectionFactory;
