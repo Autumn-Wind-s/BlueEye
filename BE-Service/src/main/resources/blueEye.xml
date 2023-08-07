@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BlueEye>
+    <!--    系统重启配置-->
+    <restartConfig>
+        <restart>false</restart>
+        <recoveryFile>E:\IDEA2\BlueEye\rdbRDB0.txt</recoveryFile>
+    </restartConfig>
+    <!--    用户信息配置-->
+    <users>
+        <user>
+            <name>song</name>
+            <password>123</password>
+            <role>1</role>
+        </user> 
+    </users>
+    <scanPackageName>blueeye.service</scanPackageName>
+    <!--    rdb文件存储路径和文件个数-->
+    <rdb>
+        <path>E:\IDEA2\BlueEye\rdbRDB0.txt</path>
+        <fileNum>2</fileNum>
+    </rdb>
+    <!--    持久化配置-->
+    <persistence>
+        <properties>db.properties</properties>>
+        <mode>default</mode>
+        <alertMapper></alertMapper>
+        <instanceMapper></instanceMapper>
+        <metricMapper></metricMapper>
+        <taskMapper></taskMapper>
+    </persistence>
+    <!--    任务时间轮的最小时间刻度和时间轮的格数-->
+    <timeWheel>
+        <timeSpan>100</timeSpan>
+        <size>16</size>
+    </timeWheel>
+    <!--    任务执行器的核心线程数-->
+    <coreThread>15</coreThread>
+    <!--    实例重试次数-->
+    <retryNum>5</retryNum>
+    <!--    报警配置文件路径-->
+    <alertConfig>com.alert</alertConfig>
+</BlueEye>
