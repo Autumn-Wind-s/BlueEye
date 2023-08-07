@@ -1,6 +1,5 @@
-package com.dispatch;
+package blueeye.dispatch;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.Delayed;
@@ -13,7 +12,6 @@ import java.util.function.Consumer;
  * @CreationDate 2023/1/30 22:12
  * @Description ：
  */
-@Data
 @Slf4j
 public class TaskInstanceList implements Delayed {
 
@@ -37,7 +35,7 @@ public class TaskInstanceList implements Delayed {
     }
 
     /**
-     * 设置bucket的过期时间,设置成功返回true
+     * 设置bucket的过期时间,新值和旧值不一样返回true
      *
      * @param expirationMs
      * @return
@@ -90,9 +88,10 @@ public class TaskInstanceList implements Delayed {
     public synchronized void clear(Consumer<TaskInstanceEntry> entry) {
         TaskInstanceEntry head = root.next;
         while (!head.equals(root)) {
+            TaskInstanceEntry temp=head.next;
             remove(head);
             entry.accept(head);
-            head = root.next;
+            head = temp;
         }
         expiration.set(-1L);
     }

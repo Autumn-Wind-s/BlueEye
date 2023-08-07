@@ -1,9 +1,8 @@
-package com.dispatch;
+package blueeye.dispatch;
 
-import com.pojo.instance.TaskInstance;
+import blueeye.pojo.instance.TaskInstance;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-
 
 
 /**

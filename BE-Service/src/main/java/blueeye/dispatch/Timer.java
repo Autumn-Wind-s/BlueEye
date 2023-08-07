@@ -1,6 +1,7 @@
-package com.dispatch;
+package blueeye.dispatch;
 
-import com.pojo.instance.TaskInstance;
+
+import blueeye.pojo.instance.TaskInstance;
 
 /**
  * @Author SDJin

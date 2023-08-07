@@ -1,4 +1,4 @@
-package com.dispatch;
+package blueeye.dispatch;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class TimeWheel {
      */
     private long interval;
     /**
-     * 当前所处时间
+     * 当前所处时间，为timeSpan的整数倍，类似指针一样，以固定的距离移动在每个格子的分界线上
      */
     private long currentTime;
     /**
@@ -85,7 +85,8 @@ public class TimeWheel {
             // 扔进当前时间轮的某个槽里,只有时间大于某个槽,才会放进去
             long virtualId = (expiration / timeSpan);
             //类似于HashMap的优化
-            int index = (int) ((virtualId-1) & wheelSize);
+//            int index = (int) ((virtualId-1) & wheelSize);
+            int index = (int) (virtualId % wheelSize);
             TaskInstanceList bucket = buckets[index];
             bucket.addTask(entry);
             // 设置bucket 过期时间
@@ -94,12 +95,13 @@ public class TimeWheel {
                 delayQueue.offer(bucket);
                 return true;
             }
+//            log.info("实例"+entry.getTaskInstance().getInstanceId()+"成功添加");
+            return true;
         } else {
             // 当前轮不能满足,需要扔到上一轮
             TimeWheel timeWheel = getOverflowWheel();
             return timeWheel.add(entry);
         }
-        return false;
     }
 
     private TimeWheel getOverflowWheel() {
@@ -119,7 +121,8 @@ public class TimeWheel {
      * @param timestamp
      */
     public void advanceLock(long timestamp) {
-        if (timestamp > currentTime + timeSpan) {
+        if (timestamp >=currentTime + timeSpan) {
+            //更新currentTime，减(timestamp % timeSpan)是为了保证currentTime为timeSpan整数倍
             currentTime = timestamp - (timestamp % timeSpan);
             if (overflowWheel != null) {
                 this.getOverflowWheel().advanceLock(timestamp);
