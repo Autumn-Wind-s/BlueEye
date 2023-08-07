@@ -1,6 +1,8 @@
-package com.container;
+package blueeye.config;
 
-import com.pojo.User;
+
+import blueeye.pojo.user.User;
+import lombok.Data;
 
 import java.util.List;
 
@@ -9,21 +11,23 @@ import java.util.List;
  * @CreationDate 2023/2/8 16:09
  * @Description ：
  */
+@Data
 public class BlueEyeConfig {
 
     List<User> users;
     String scanPackageName;
     String rdbPath;
-    String rdbFileNum;
+    Integer rdbFileNum;
     Integer persistenceMode;
+    String properties;
+    String manager;
     String alertMapper;
     String instanceMapper;
     String metricMapper;
     String taskMapper;
     Long timeSpan;
-    Integer size;
+    Integer wheelSize;
     Integer coreThread;
     Integer retryNum;
-    List<String> monitorTasks;
 
 }
