@@ -1,4 +1,4 @@
-package com.pojo.alert;
+package blueeye.pojo.alert;
 
 /**
  * @Author SDJin
