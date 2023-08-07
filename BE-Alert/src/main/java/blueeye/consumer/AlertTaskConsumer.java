@@ -19,14 +19,14 @@ import java.util.concurrent.ExecutionException;
  */
 public class AlertTaskConsumer extends Thread {
     private AlertManager manager;
-
+    private boolean running = true;
     public AlertTaskConsumer(AlertManager manager) {
         this.manager = manager;
     }
 
     @Override
     public void run() {
-        while (true) {
+        while (running) {
             AlertTask task =null;
             try {
                 task = manager.getQueue().take();
@@ -58,5 +58,8 @@ public class AlertTaskConsumer extends Thread {
             //  将AlertRecord添加到数据中心
            manager.getDataCenter().getRecords().addAlertRecord(alertRecord);
         }
+    }
+    public void shutdown(){
+        running=false;
     }
 }

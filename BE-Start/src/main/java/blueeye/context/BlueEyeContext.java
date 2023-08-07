@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @Author SDJin
  * @CreationDate 2023/2/8 13:47
- * @Description ：
+ * @Description ：系统启动类
  */
 @Slf4j
 public class BlueEyeContext {
@@ -71,7 +71,7 @@ public class BlueEyeContext {
      *
      * @param context ServletContext
      */
-    public void init(ServletContext context) throws IOException, DocumentException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, InterruptedException {
+    public void init(ServletContext context) throws IOException, DocumentException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
         InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("blueEye.xml");
         SAXReader sr = new SAXReader();
         Document doc = sr.read(inputStream);
@@ -120,7 +120,7 @@ public class BlueEyeContext {
             //读取报警配置文件
             AlertConfig alertConfig = FileUtil.readAlertConfig(sr, "AlertConfig.xml");
             //创建数据中心
-            DataCenter data = new DataCenter.DataCenterBuilder().metaTasks(new TaskContainer()).monitorTasks(new TaskContainer()).interfaceTasks(new TaskContainer()).scriptTasks(new TaskContainer()).metrics(new MetricDataContainer()).instances(new InstanceContainer()).records(new AlertRecordContainer()).mapping(new MetricTaskIdMapping()).taskId(new AtomicInteger()).instanceId(new AtomicInteger()).dataId(new AtomicInteger()).recordId(new AtomicInteger()).config(new ConfigContainer()).build();
+            DataCenter data = new DataCenter.DataCenterBuilder().metaTasks(new TaskContainer<MonitorTask>()).monitorTasks(new TaskContainer<MonitorTask>()).interfaceTasks(new TaskContainer<InterfaceTask>()).scriptTasks(new TaskContainer<ScriptTask>()).metrics(new MetricDataContainer()).instances(new InstanceContainer()).records(new AlertRecordContainer()).mapping(new MetricTaskIdMapping()).taskId(new AtomicInteger()).instanceId(new AtomicInteger()).dataId(new AtomicInteger()).recordId(new AtomicInteger()).config(new ConfigContainer()).build();
             data.getConfig().setAlertConfig(alertConfig);
             data.getConfig().setBlueEyeconfig(blueEyeConfig);
             dataCenter = data;
@@ -157,7 +157,7 @@ public class BlueEyeContext {
     /**
      * 整个平台的终止方法，外部项目需在终止时执行该方法
      *
-     * @throws IOException
+     * @throws IOException io异常
      */
     public void destroy() throws IOException {
         //终止任务执行器
@@ -168,6 +168,8 @@ public class BlueEyeContext {
         rdb.backup();
         //释放持久化的资源
         mapperManager.destroy();
+        //释放报警资源
+        alertManager.destroy();
     }
 
 
@@ -188,7 +190,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(cpuData);
                 return "cpu数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("gpu监控任务"), Optional.of("负责监控gpu的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -202,7 +204,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(gpuData);
                 return "Gpu数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(10000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(10000L), Optional.of(1));
         addCustomizeTask(Optional.of("gc监控任务"), Optional.of("负责监控gc的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -216,7 +218,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(gcData);
                 return "Gc数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("hardDisk监控任务"), Optional.of("负责监控hardDisk的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -230,7 +232,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(hardDiskData);
                 return "hardDiskData数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("jvmThread监控任务"), Optional.of("负责监控jvmThread的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -244,7 +246,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(data);
                 return "jvmThread数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("heap监控任务"), Optional.of("负责监控heap的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -258,7 +260,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(data);
                 return "heap数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("load监控任务"), Optional.of("负责监控系统load的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -272,7 +274,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(data);
                 return "load数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("memory监控任务"), Optional.of("负责监控系统memory的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -286,7 +288,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(data);
                 return "memory数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(5000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(5000L), Optional.of(1));
         addCustomizeTask(Optional.of("noHeap监控任务"), Optional.of("负责监控系统noHeap的数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -300,7 +302,7 @@ public class BlueEyeContext {
                 dataCenter.getMetrics().addMetricData(data);
                 return "noHeap数据收集和报警完成";
             }
-        }, Optional.ofNullable(null), Optional.of(10000L), Optional.of(1));
+        }, Optional.empty(), Optional.of(10000L), Optional.of(1));
 
     }
 
@@ -318,7 +320,7 @@ public class BlueEyeContext {
                 mapperManager.alertRecordMapper.persistence(compress);
                 return "报警记录淘汰完成";
             }
-        }, Optional.ofNullable(null), Optional.of(3000L), Optional.of(3));
+        }, Optional.empty(), Optional.of(3000L), Optional.of(3));
         addMetaTask(Optional.of("过期指标数据淘汰元任务"), Optional.of("负责淘汰内存中已到期指标数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -331,7 +333,7 @@ public class BlueEyeContext {
                 }
                 return "过期指标数据淘汰完成";
             }
-        }, Optional.ofNullable(null), Optional.of(10 * 60 * 1000L), Optional.of(3));
+        }, Optional.empty(), Optional.of(10 * 60 * 1000L), Optional.of(3));
         addMetaTask(Optional.of("过期任务淘汰元任务"), Optional.of("负责淘汰内存中已到期且未有活跃实例的任务"), new ExecuteCallback() {
             @Override
             public String execute(int id, int instanceId) throws Exception {
@@ -371,7 +373,7 @@ public class BlueEyeContext {
                 mapperManager.taskMapper.persistence(compress2);
                 return "过期指标数据淘汰完成";
             }
-        }, Optional.ofNullable(null), Optional.of(12 * 60 * 60 * 1000L), Optional.of(3));
+        }, Optional.empty(), Optional.of(12 * 60 * 60 * 1000L), Optional.of(3));
         addMetaTask(Optional.of("过期实例淘汰元任务"), Optional.of("负责淘汰内存中已到期且状态为已完成或死亡的任务实例"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
@@ -391,14 +393,14 @@ public class BlueEyeContext {
                 mapperManager.instanceMapper.persistence(compress);
                 return "过期实例淘汰完成";
             }
-        }, Optional.ofNullable(null), Optional.of(3 * 60 * 1000L), Optional.of(3));
+        }, Optional.empty(), Optional.of(3 * 60 * 1000L), Optional.of(3));
         addCustomizeTask(Optional.of("数据备份元任务"), Optional.of("负责备份内存数据"), new ExecuteCallback() {
             @Override
             public String execute(int taskId, int instanceId) throws Exception {
                 rdb.backup();
                 return "数据备份完成";
             }
-        }, Optional.ofNullable(null), Optional.of(3000L), Optional.of(5));
+        }, Optional.empty(), Optional.of(3000L), Optional.of(5));
 //        todo 监控系统各组件的元任务
     }
 
@@ -406,8 +408,8 @@ public class BlueEyeContext {
     /**
      * 设置接口qps监控
      *
-     * @param servletContext
-     * @param set
+     * @param servletContext 对象
+     * @param set 拦截路径集合
      */
     private void setInterfaceMonitor(ServletContext servletContext, Set<String> set) {
         try {
@@ -428,8 +430,8 @@ public class BlueEyeContext {
     /**
      * 作为提供给用户进行线程池监控的入口
      *
-     * @param executorName
-     * @param executor
+     * @param executorName 线程池名称
+     * @param executor 线程池对象
      */
     public static boolean monitorExecutor(String executorName, ThreadPoolExecutor executor, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
         //判重
@@ -485,15 +487,15 @@ public class BlueEyeContext {
     /**
      * 作为提供给用户进行数据源监控的入口
      *
-     * @param dataSourceName
-     * @param dataSource
+     * @param dataSourceName 数据源名称
+     * @param dataSource 数据源对象
      */
     public static boolean monitorDataSource(String dataSourceName, DataSource dataSource, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
         //判重
         if (!dataCenter.getMapping().isContains(MetricsType.DataSource, dataSourceName)) {
             return false;
         }
-        MonitorTask task = null;
+        MonitorTask task;
         int taskId = dataCenter.getTaskId().getAndIncrement();
         // 生成监控任务，定义监控逻辑
         if (dataSource instanceof ComboPooledDataSource) {
@@ -582,10 +584,10 @@ public class BlueEyeContext {
     /**
      * 作为用户自定义调度任务添加的入口
      *
-     * @param taskName
-     * @param taskDescription
-     * @param preTask
-     * @param executeCallback
+     * @param taskName 任务名称
+     * @param taskDescription 任务描述
+     * @param preTask 前置任务
+     * @param executeCallback 执行逻辑
      */
     public static boolean addCustomizeTask(Optional<String> taskName, Optional<String> taskDescription, ExecuteCallback executeCallback, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
         MonitorTask task = new MonitorTask(executeCallback);
@@ -607,10 +609,10 @@ public class BlueEyeContext {
     /**
      * 作为元任务添加的入口
      *
-     * @param taskName
-     * @param taskDescription
-     * @param preTask
-     * @param executeCallback
+     * @param taskName 任务名称
+     * @param taskDescription 任务描述
+     * @param preTask 前置任务
+     * @param executeCallback 任务逻辑
      */
     private static boolean addMetaTask(Optional<String> taskName, Optional<String> taskDescription, ExecuteCallback executeCallback, Optional<List> preTask, Optional<Long> cycle, Optional<Integer> order) {
         MonitorTask task = new MonitorTask(executeCallback);

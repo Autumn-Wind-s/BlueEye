@@ -25,6 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class AlertManager {
     private  BlockingQueue<AlertTask> queue ;
     private  DataCenter dataCenter;
+    private AlertTaskConsumer consumer;
     /**
      * 初始化报警服务
      *
@@ -45,7 +46,8 @@ public class AlertManager {
         NoteSender.templateCode = alertConfig.getTemplateCode();
         MailSender.mailUser = alertConfig.getMailUser();
         MailSender.mailPassword = alertConfig.getMailPassword();
-        new AlertTaskConsumer(this).start();
+        consumer=  new AlertTaskConsumer(this);
+        consumer.start();
     }
 
     /**
@@ -82,6 +84,12 @@ public class AlertManager {
         }
     }
 
+    /**
+     * 关闭消费者线程
+     */
+    public void destroy(){
+        consumer.shutdown();
+    }
     public DataCenter getDataCenter() {
         return dataCenter;
     }
