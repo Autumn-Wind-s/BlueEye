@@ -1,10 +1,14 @@
-package com.pojo.metric;
+package blueeye.pojo.metric;
 
-import com.pojo.Compression.CompressionInterface;
-import com.pojo.po.MetricDataPo;
+
+import blueeye.pojo.alert.AlertRule;
+import blueeye.pojo.task.impl.alert.AlertTask;
 import lombok.Data;
 
+import java.lang.reflect.Field;
 import java.sql.Timestamp;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Author SDJin
@@ -12,7 +16,7 @@ import java.sql.Timestamp;
  * @Description ：
  */
 @Data
-public abstract class MetricData implements CompressionInterface<MetricDataPo> {
+public abstract class MetricData  {
    protected Integer id;
    protected Integer taskId;
    protected Integer instanceId;
